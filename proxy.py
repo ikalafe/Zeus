@@ -47,8 +47,8 @@ def server_loop(local_host, local_port, remote_host, remote_port, receive_first)
 
     print("[*] Listening on %s:%d" % (local_host, local_port))
     server.listen(5)
-    while True: # 3
-        client_socket, addr = server.accept
+    while True: # 4
+        client_socket, addr = server.accept()
         # print out the local connection information
         line = "> Received incoming connection from %s:%d" % (addr[0], addr[1])
         print(line)
@@ -104,3 +104,27 @@ def request_handler(buffer):
 def response_handler(buffer):
     # perform packet modification
     return buffer
+
+def main():
+    if len(sys.argv[1:]) != 5:
+        print("Usage: ./proxy.py [localhost] [localport]", end='')
+        print("[remotehost] [remoteport] [receive_first]")
+        print("Example: ./proxy.py 127.0.0.1 9000 10.12.132.1 9000 True")
+        sys.exit(0)
+    local_host = sys.argv[1]
+    local_port = int(sys.argv[2])
+
+    remote_host = sys.argv[3]
+    remote_port = int(sys.argv[4])
+
+    receive_first = sys.argv[5]
+
+    if "True" in receive_first:
+        receive_first = True
+    else:
+        receive_first = False
+
+    server_loop(local_host=local_host, local_port=local_port,remote_host=remote_host, remote_port=remote_port,receive_first=receive_first)
+
+if __name__ == "__main__":
+    main()
