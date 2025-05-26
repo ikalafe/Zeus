@@ -7,7 +7,7 @@ import threading
 import time
 
 # subnet to target
-SUBNET = '192.168.22.195'
+SUBNET = '192.168.22.0/24'
 # magin string we'll check ICMP response for 
 MESSAGE = 'PYTHONRULES!'
 
