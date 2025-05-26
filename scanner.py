@@ -70,18 +70,18 @@ class Scanner:
             self.socket.ioct(socket.SIO_RCVALL, socket.RCVALL_ON)
     def sniff(self):
         # should look familiar from previeus example
-        if os.name == "nt":
-            socket_protocol = socket.IPPROTO_IP
-        else:
-            socket_protocol = socket.IPPROTO_ICMP
+        # if os.name == "nt":
+        #     socket_protocol = socket.IPPROTO_IP
+        # else:
+        #     socket_protocol = socket.IPPROTO_ICMP
 
-        sniffer = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket_protocol)
-        sniffer.bind((self.host, 0))
-        sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)      
+        # sniffer = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket_protocol)
+        # sniffer.bind((self.host, 0))
+        # sniffer.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)      
 
-        if os.name == 'nt':
-            sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
-
+        # if os.name == 'nt':
+        #     sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+        
         host_up = set([f'{str(self.host)} *'])
         try:
             while True:
@@ -91,19 +91,27 @@ class Scanner:
                 ip_header = IP(raw_buffer[0:20])
                 # if it's ICMP, we want it
                 if ip_header.protocol == "ICMP":
-                    print('Protocol: %s %s -> %s' % (ip_header.protocol, ip_header.src_address, ip_header.dst_address))
-                    print(f'Version: {ip_header.ver}')
-                    print(f'Header Length: {ip_header.ihl} TTL: {ip_header.ttl}')
-
                     # calculate where our ICMP packet starts
                     offset = ip_header.ihl * 4
                     buf = raw_buffer[offset:offset + 8]
                     # create our ICMP structures
                     icmp_header = ICMP(buf=buf)
-                    print('ICMP -> Type: %s Code: %s\n' % (icmp_header.type, icmp_header.code))
+                    # check for TYPE 3 and CODE 
+                    if icmp_header.code == 3 and icmp_header.type == 3:
+                        if ipaddress.ip_address(ip_header.src_address) in ipaddress.IPv4Network(SUBNET):
+                            # make sure it has our magic message 
+                            if raw_buffer[len(raw_buffer) - len(MESSAGE):] == bytes(MESSAGE, 'utf8'):
+                                tgt = str(ip_header.src_address)
+                                if tgt != self.host and tgt not in host_up:
+                                    host_up.add(str(ip_header.src_address))
+                                    print(f'Host Up: {tgt}')                                
         except KeyboardInterrupt:
             if os.name == 'nt':
                 sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
+            print(f'\n\nSummary: Hosts up on {SUBNET}')
+            for host in sorted(host_up):
+                print(f'{host}')
+            print('')
             sys.exit()
 
 if __name__ == '__main__':
@@ -111,6 +119,9 @@ if __name__ == '__main__':
         host = sys.argv[1]
     else:
         host = '192.168.84.135'
-    scanner = Scanner(host)
-    scanner.sniff()
+    s = Scanner(host)
+    time.sleep(5)
+    t = threading.Thread(target=udp_sender)
+    t.start()
+    s.sniff()
         
