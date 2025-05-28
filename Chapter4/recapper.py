@@ -24,14 +24,39 @@ def get_header(payload):
     return header
 
 def extract_content(Response, content_name='image'):
-    pass
+    content, content_type = None, None
+    if content_name in Response.header['Content-Type']:
+        content_type = Response.header['Content-Type'].split('/')[1]
+        content = Response.payload[Response.payload.index(b'\r\n\r\n')+4:]
+        
+        if 'Content-Encoding' in Response.header:
+            if Response.header['Content-Encoding'] == 'gzip':
+                content = zlib.decompress(Response.payload, zlib.MAX_WBITS | 32)
+            elif Response.header['Content-Encoding'] == "deflate":
+                content = zlib.decompress(Response.payload)
+    return content, content_type
 
 class Recapper:
     def __init__(self, fname):
-        pass
+        pcap = rdpcap(fname)
+        self.sessions = pcap.sessions()
+        self.response = list()
     
     def get_response(self):
-        pass
+        for session in self.sessions:
+            payload = b''
+            for packet in self.sessions[session]:
+                try:
+                    if packet[TCP].dport == 80 or packet[TCP].sport == 80:
+                        payload += bytes(packet[TCP].payload)
+                except IndexError:
+                    sys.stdout.write('x')
+                    sys.stdout.flush()
+            if payload:
+                header = get_header(payload=payload)
+                if header is None:
+                    continue
+                self.response.append(Response(header=header, payload=payload))
     
     def write(self, content_name):
         pass
