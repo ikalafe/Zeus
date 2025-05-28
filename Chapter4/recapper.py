@@ -59,7 +59,13 @@ class Recapper:
                 self.response.append(Response(header=header, payload=payload))
     
     def write(self, content_name):
-        pass
+        for i, response in enumerate(self.response):
+            content, content_type = extract_content(response=response, content_name=content_name)
+            if content and content_type:
+                fname = os.path.join(OUTDIR, f'ex_{i}.{content_type}')
+                print(f'Writing {fname}')
+                with open(fname, 'wb') as f:
+                    f.write(content)
     
 if __name__ == '__main__':
     pfile = os.path.join(PCAPS, 'pcap.pcap')
