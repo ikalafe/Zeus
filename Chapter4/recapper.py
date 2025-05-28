@@ -60,7 +60,7 @@ class Recapper:
     
     def write(self, content_name):
         for i, response in enumerate(self.response):
-            content, content_type = extract_content(response=response, content_name=content_name)
+            content, content_type = extract_content(Response=response, content_name=content_name)
             if content and content_type:
                 fname = os.path.join(OUTDIR, f'ex_{i}.{content_type}')
                 print(f'Writing {fname}')
