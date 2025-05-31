@@ -7,7 +7,7 @@ import threading
 import time
 
 FILTERED = [".jpg", ".gif", ".png", ".css"]
-TARGET = "http://localhost:8881/"
+TARGET = "https://mellishoes.ir/"
 THREADS = 10
 
 answers = queue.Queue()
