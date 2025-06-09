@@ -1,18 +1,18 @@
 from ctypes import byref, c_uint, c_ulong, sizeof, Structure, windll
 import random
 import sys
-import time 
+import time
 import win32api
 
-class LASTIUTINFO(Structure):
-    fields_ = [
+class LASTINPUTINFO(Structure):
+    _fields_ = [
         ('cbSize', c_uint),
         ('dwTime', c_ulong)
     ]
 
 def get_last_input():
-    structure_lastinputinfo = LASTIUTINFO()
-    structure_lastinputinfo.cbSize = sizeof(LASTIUTINFO)
+    structure_lastinputinfo = LASTINPUTINFO()
+    structure_lastinputinfo.cbSize = sizeof(LASTINPUTINFO)
 
     windll.user32.GetLastInputInfo(byref(structure_lastinputinfo))
     run_time = windll.kernel32.GetTickCount()
@@ -22,7 +22,7 @@ def get_last_input():
 
 class Detector:
     def __init__(self):
-        self.double_click = 0
+        self.double_clicks = 0
         self.keystrokes = 0
         self.mouse_clicks = 0
 
@@ -30,10 +30,60 @@ class Detector:
         for i in range(0, 0xff):
             state = win32api.GetAsyncKeyState(i)
             if state & 0x0001:
-                if i == 0x1:
+                if i == 0x01:
                     self.mouse_clicks += 1
                     return time.time()
-                elif i > 32 and i < 127:
+                elif 32 < i < 127:
                     self.keystrokes += 1
         return None
-     
+
+    def detect(self):
+        previous_timestamp = None
+        first_double_click = None
+        double_click_threshold = 0.35
+        max_double_clicks = 10
+        max_keystrokes = random.randint(10, 25)
+        max_input_threshold = 30000
+
+        last_input = get_last_input()
+        if last_input >= max_input_threshold:
+            print("[*] Long idle time detected. Possible sandbox environment.")
+            sys.exit(0)
+
+        detection_complete = False
+        while not detection_complete:
+            last_input = get_last_input()
+            if last_input >= max_input_threshold:
+                print("[*] Long idle time detected during loop. Possible sandbox environment.")
+                sys.exit(0)
+
+            keypress_time = self.get_key_press()
+            if keypress_time is not None and previous_timestamp is not None:
+                elapsed = keypress_time - previous_timestamp
+                if elapsed <= double_click_threshold:
+                    self.mouse_clicks -= 2
+                    self.double_clicks += 1
+                    if first_double_click is None:
+                        first_double_click = keypress_time
+                    else:
+                        if self.double_clicks >= max_double_clicks:
+                            if keypress_time - first_double_click <= (max_double_clicks * double_click_threshold):
+                                print("[*] Rapid double-clicks detected. Possible sandbox environment.")
+                                sys.exit(0)
+                if self.keystrokes >= max_keystrokes and self.double_clicks >= max_double_clicks:
+                    detection_complete = True
+                    print("[*] Detection complete: Enough keystrokes and double-clicks.")
+            if keypress_time is not None:
+                previous_timestamp = keypress_time
+
+            print(f"[*] Keystrokes: {self.keystrokes}, Mouse clicks: {self.mouse_clicks}, Double clicks: {self.double_clicks}")
+            time.sleep(0.1)
+
+if __name__ == '__main__':
+    try:
+        d = Detector()
+        d.detect()
+        print('okay.')
+    except KeyboardInterrupt:
+        print("\n[*] Program interrupted by user.")
+        sys.exit(0)
