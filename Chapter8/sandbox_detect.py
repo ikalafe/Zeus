@@ -20,3 +20,20 @@ def get_last_input():
     print(f"[*] It's been {elapsed} milliseconds since the last event.")
     return elapsed
 
+class Detector:
+    def __init__(self):
+        self.double_click = 0
+        self.keystrokes = 0
+        self.mouse_clicks = 0
+
+    def get_key_press(self):
+        for i in range(0, 0xff):
+            state = win32api.GetAsyncKeyState(i)
+            if state & 0x0001:
+                if i == 0x1:
+                    self.mouse_clicks += 1
+                    return time.time()
+                elif i > 32 and i < 127:
+                    self.keystrokes += 1
+        return None
+     
