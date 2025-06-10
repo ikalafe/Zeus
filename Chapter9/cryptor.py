@@ -51,3 +51,7 @@ def decrypt(encrypted):
     
     plaintext = zlib.decompress(decrypted)
     return plaintext
+
+if __name__ == '__main__':
+    plaintext = b'hey there you.'
+    print(decrypt(encrypt(plaintext=plaintext)))
