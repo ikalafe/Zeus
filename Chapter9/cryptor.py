@@ -35,3 +35,19 @@ def encrypt(plaintext):
     msg_payload = encrypt_session_key + cipher_aes.nonce + tag + ciphertext
     encrypted = base64.encodebytes(msg_payload)
     return encrypted
+
+def decrypt(encrypted):
+    encrypted_bytes = BytesIO(base64.decodebytes(encrypted))
+    cipher_rsa, keysize_in_bytes = get_rsa_cipher('pri')
+
+    encrypted_session_key = encrypted_bytes.read(keysize_in_bytes)
+    nonce = encrypted_bytes.read(16)
+    tag = encrypted_bytes.read(16)
+    ciphertext = encrypted_bytes.read()
+
+    session_key = cipher_rsa.decrypt(encrypted_session_key)
+    cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce=nonce)
+    decrypted = cipher_aes.decrypt_and_verify(ciphertext, tag)
+    
+    plaintext = zlib.decompress(decrypted)
+    return plaintext
